@@ -1,0 +1,90 @@
+#define LED1 25
+#define LED2 26
+#define LED3 0 // NOT 25 26 27 28 29 30 !!!
+#define LED4 1
+#define LED5 2
+#define LED6 30 // No need to define it separately. I initially named the variables LED_1 and LED_2, so I went through trouble.
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(LED1, OUTPUT);
+  digitalWrite(LED1, HIGH); // Datasheet says 'Output 'Low' to on LED (https://www.infineon.com/dgdl/Board_Users_Manual_XMC1100_CPU_Card_R2.pdf?fileId=db3a30433da119ff013da232476b1416)
+
+  pinMode(LED2, OUTPUT);
+  digitalWrite(LED2, HIGH);
+
+  pinMode(LED3, OUTPUT);
+  digitalWrite(LED3, HIGH);
+
+  pinMode(LED4, OUTPUT);
+  digitalWrite(LED4, HIGH);
+
+  pinMode(LED5, OUTPUT);
+  digitalWrite(LED5, HIGH);
+
+  pinMode(LED6, OUTPUT);
+  digitalWrite(LED6, HIGH);
+}
+
+
+// Initial test because of wrong pin & variable name
+//void loop() {
+//  digitalWrite(LED1, LOW);
+//  Serial.println("LED 1 ON");
+//  delay(1000);
+//  digitalWrite(LED1, HIGH);
+//  Serial.println("LED 1 OFF");
+//
+//  digitalWrite(LED2, LOW);
+//  Serial.println("LED 2 ON");
+//  delay(1000);
+//  digitalWrite(LED2, HIGH);
+//  Serial.println("LED 2 OFF");
+//
+//  digitalWrite(LED3, LOW);
+//  Serial.println("LED 3 ON");
+//  delay(1000);
+//  digitalWrite(LED3, HIGH);
+//  Serial.println("LED 3 OFF");
+//
+//  digitalWrite(LED4, LOW);
+//  Serial.println("LED 4 ON");
+//  delay(1000);
+//  digitalWrite(LED4, HIGH);
+//  Serial.println("LED 4 OFF");
+//
+//  digitalWrite(LED5, LOW);
+//  Serial.println("LED 5 ON");
+//  delay(1000);
+//  digitalWrite(LED5, HIGH);
+//  Serial.println("LED 5 OFF");
+//
+//  digitalWrite(LED6, LOW);
+//  Serial.println("LED 6 ON");
+//  delay(1000);
+//  digitalWrite(LED6, HIGH);
+//  Serial.println("LED 6 OFF");
+//}
+
+void loop() {
+  int leds[] = {LED1, LED2, LED3, LED4, LED5, LED6};
+  int num = sizeof(leds) / sizeof(leds[0]);
+
+  for (int i = 0; i < num; i++) {
+    digitalWrite(leds[i], LOW);
+    Serial.print("LED ");
+    Serial.print(i + 1);
+    Serial.println(" ON");
+    delay(100);
+
+    digitalWrite(leds[i], HIGH);
+    Serial.print("LED ");
+    Serial.print(i + 1);
+    Serial.println(" OFF");
+    delay(100);
+  }
+}
+
+
+
+
