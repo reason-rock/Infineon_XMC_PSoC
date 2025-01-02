@@ -1,0 +1,134 @@
+#include <Dps310.h>
+#include <Tlv493d.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+Dps310 Dps310PressureSensor = Dps310();
+Tlv493d Tlv493dMagnetic3DSensor = Tlv493d();
+
+LiquidCrystal_I2C lcd(0x3F, 16, 2); // I2C address check check check
+
+float last_azimuth = 0;
+bool page = false; // temp default
+
+const int graphSize = 16;
+float temp_history[graphSize] = {0};
+float press_history[graphSize] = {0};
+
+const float min_temp = 20;
+const float max_temp = 30;
+const float min_press = 90000;
+const float max_press = 110000;
+
+byte graphChars[9][8] = {
+    {0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b11111},
+    {0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b11111, 0b11111},
+    {0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b11111, 0b11111, 0b11111},
+    {0b00000, 0b00000, 0b00000, 0b00000, 0b11111, 0b11111, 0b11111, 0b11111},
+    {0b00000, 0b00000, 0b00000, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111},
+    {0b00000, 0b00000, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111},
+    {0b00000, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111},
+    {0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111},
+    {0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000} // 0,1,2,3,....8 (X) -> 1,2,3....8,0 (O)
+};
+
+void create_char() {
+  for (int i = 0; i < 9; i++) {
+    lcd.createChar(i, graphChars[i]);
+  }
+}
+
+void init_graph() {
+  for (int i = 0; i < graphSize; i++) {
+    temp_history[i] = min_temp; 
+    press_history[i] = min_press;
+  }
+}
+
+float graph_fitting(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void data_loader(float history[], float newValue) {
+  for (int i = graphSize - 1; i > 0; i--) { // rightshift
+    history[i] = history[i - 1];
+  }
+  history[0] = newValue; // First in
+}
+
+void setup() {
+  // Serial.begin(1000000); // try to use mic
+  Serial.begin(115200);
+  while (!Serial);
+
+  Dps310PressureSensor.begin(Wire);
+  Tlv493dMagnetic3DSensor.begin();
+  Tlv493dMagnetic3DSensor.setAccessMode(Tlv493dMagnetic3DSensor.MASTERCONTROLLEDMODE);
+  Tlv493dMagnetic3DSensor.disableTemp();
+
+  lcd.init();
+  lcd.backlight();
+  create_char();
+
+  init_graph(); // char error fix
+
+  lcd.clear();
+  lcd.print("Initialize");
+  delay(2000);
+  lcd.clear();
+}
+
+void loop() {
+  float temperature;
+  float pressure;
+  uint8_t oversampling = 7;
+  int16_t ret;
+
+  Tlv493dMagnetic3DSensor.updateData();
+  float magneticAmount = Tlv493dMagnetic3DSensor.getAmount();
+  float azimuth = Tlv493dMagnetic3DSensor.getAzimuth();
+  float polar = Tlv493dMagnetic3DSensor.getPolar(); // reserved
+
+
+  ret = Dps310PressureSensor.measureTempOnce(temperature, oversampling);
+  ret = Dps310PressureSensor.measurePressureOnce(pressure, oversampling);
+  if (magneticAmount > 90 || abs(azimuth - last_azimuth) > 1) {
+    page = !page; // transaction
+  }
+  last_azimuth = azimuth;
+
+  data_loader(temp_history, temperature);
+  data_loader(press_history, pressure);
+
+  lcd.clear();
+  if (!page) { // temp
+    lcd.setCursor(0, 0);
+    lcd.print("Temp: ");
+    lcd.print(temperature);
+    lcd.print("C");
+
+    lcd.setCursor(0, 1); //next line
+    for (int i = 0; i < graphSize; i++) {
+      int graphTemp = (int)graph_fitting(temp_history[i], min_temp, max_temp, 0, 8);
+      lcd.write(graphTemp);
+    }
+  } else { // press
+    lcd.setCursor(0, 0);
+    lcd.print("Press: ");
+    lcd.print(pressure / 1000);
+    lcd.print("kPa");
+//    lcd.print(pressure);
+//    lcd.print(" Pa");
+
+    lcd.setCursor(0, 1); //next line
+    for (int i = 0; i < graphSize; i++) {
+      int graphPress = (int)graph_fitting(press_history[i], min_press, max_press, 0, 8);
+      lcd.write(graphPress);
+    }
+  }
+
+//  Serial.println(magneticAmount);
+//  Serial.println(azimuth);
+
+  delay(500);
+}
