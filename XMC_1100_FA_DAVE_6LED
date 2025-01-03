@@ -63,16 +63,40 @@ XMC_GPIO_CONFIG_t gpio_output_config =
 void SysTick_Handler(void)
 {
   static uint32_t ticks = 0;
+  static int led_index = 0;
 
   ticks++;
-  if (ticks == TICKS_WAIT)
+
+  if (ticks >= TICKS_WAIT)
   {
-    XMC_GPIO_ToggleOutput(LED1);
-    XMC_GPIO_ToggleOutput(LED2);
-    XMC_GPIO_ToggleOutput(LED3);
-    XMC_GPIO_ToggleOutput(LED4);
-    XMC_GPIO_ToggleOutput(LED5);
-    XMC_GPIO_ToggleOutput(LED6);
+    switch(led_index)
+    {
+      case 0:
+        XMC_GPIO_ToggleOutput(LED1);
+        break;
+      case 1:
+        XMC_GPIO_ToggleOutput(LED2);
+        break;
+      case 2:
+        XMC_GPIO_ToggleOutput(LED3);
+        break;
+      case 3:
+        XMC_GPIO_ToggleOutput(LED4);
+        break;
+      case 4:
+        XMC_GPIO_ToggleOutput(LED5);
+        break;
+      case 5:
+        XMC_GPIO_ToggleOutput(LED6);
+        break;
+    }
+
+    led_index++;
+    if (led_index > 5)
+    {
+      led_index = 0;
+    }
+
     ticks = 0;
   }
 }
