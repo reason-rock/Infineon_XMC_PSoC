@@ -100,7 +100,18 @@ int main(void)
 
         /* Wait for 0.5 seconds */
         Cy_SysLib_Delay(LED_DELAY_MS);
+
+        Cy_GPIO_Inv(CYBSP_USER_LED2_PORT, CYBSP_USER_LED2_PIN);
+
+        Cy_SysLib_Delay(LED_DELAY_MS);
+
+        // Cy_GPIO_Inv(CYBSP_USER_LED3_PORT, CYBSP_USER_LED3_PIN); // Not work with LED3...
+        // Cy_GPIO_Write(CYBSP_LED_BTN1_PORT, CYBSP_LED_BTN1_NUM, CYBSP_LED_STATE_OFF);
+
+        Cy_SysLib_Delay(LED_DELAY_MS);
+
     }
 }
 
 /* [] END OF FILE */
+
