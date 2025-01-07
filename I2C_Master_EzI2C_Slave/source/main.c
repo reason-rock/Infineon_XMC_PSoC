@@ -54,7 +54,7 @@
 #define ON                      CYBSP_LED_STATE_ON
 
 /* Delay duration */
-#define CMD_TO_CMD_DELAY        (1000UL)
+#define CMD_TO_CMD_DELAY        (100UL)
 
 /*******************************************************************************
  * Function Name: main
@@ -73,6 +73,7 @@
 int main(void)
 {
     cy_rslt_t result;
+    cy_stc_scb_uart_context_t CYBSP_UART_context; // UART from hello world example
 
     /* Initialize the device and board peripherals */
     result = cybsp_init() ;
@@ -84,6 +85,10 @@ int main(void)
     uint8_t cmd = ON;
     uint32_t status;
     uint8_t buffer[WRITE_PACKET_SIZE];
+
+    /* Configure and enable the UART peripheral */
+    Cy_SCB_UART_Init(CYBSP_UART_HW, &CYBSP_UART_config, &CYBSP_UART_context);
+    Cy_SCB_UART_Enable(CYBSP_UART_HW);
 
     /* Initiate and enable Slave and Master SCBs */
     status = initSlave();
@@ -111,6 +116,9 @@ int main(void)
         /* Send packet with command to the slave */
         if (TRANSFER_CMPLT == WritePacketToEzI2C(buffer, WRITE_PACKET_SIZE))
         {
+            Cy_SCB_UART_PutString(CYBSP_UART_HW, "Send\r\n"); //string from hello world
+
+
             /* The below code is for slave function. It is implemented in
              * this code example so that the master function can be tested
              * without the need of one more kit.
@@ -119,6 +127,8 @@ int main(void)
             /* Read response packet from the slave */
             if (TRANSFER_CMPLT == ReadStatusPacketFromEzI2C())
             {
+                Cy_SCB_UART_PutString(CYBSP_UART_HW, "Read\r\n"); // String from hello world
+
                 /* Next command to be written */
                 cmd = (cmd == ON) ? OFF : ON;
             }
