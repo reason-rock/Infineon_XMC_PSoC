@@ -21,4 +21,4 @@
 
 5. I2C_Master_EzI2C_Slave : Modified I2C example to print to the serial monitor via UART on every Send and Read operation (For ModusToolbox) - Based on I2C_Master_EzI2C_Slave example
 
-5. MSC_CAPSENSE_CSD_Slider_Tuning :
+5. MSC_CAPSENSE_CSD_Slider_Tuning : Modified Slider example to print position with UART and control LED with slider position value(For ModusToolbox) - Based on SC_CAPSENSE_CSD_Slider_Tuning

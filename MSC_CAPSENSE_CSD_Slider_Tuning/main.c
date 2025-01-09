@@ -47,6 +47,8 @@
 #include "cycfg.h"
 #include "cycfg_capsense.h"
 
+#include <stdio.h> // For terminal output
+
 
 /*******************************************************************************
 * Macros
@@ -63,7 +65,8 @@
 /* EZI2C interrupt priority must be higher than CapSense interrupt. */
 #define EZI2C_INTR_PRIORITY              (2u)
 
-
+#define LED_ON                      (0u) // LED ON OFF
+#define LED_OFF                     (1u)
 /*******************************************************************************
 * Global Variables
 *******************************************************************************/
@@ -85,12 +88,15 @@ static void initialize_capsense(void);
 static void capsense_msc0_isr(void);
 static void ezi2c_isr(void);
 static void initialize_capsense_tuner(void);
-static void led_control(void);
+// static void led_control(void);
 
 #if CY_CAPSENSE_BIST_EN
 static void measure_cp(void);
 #endif
 
+
+static void process_slider_position(void); // slider position
+static void initialize_uart(void); // UART init
 /*******************************************************************************
 * Function Name: main
 ********************************************************************************
@@ -127,6 +133,10 @@ int main(void)
     /* Initialize MSC CapSense */
     initialize_capsense();
 
+    /* Initialize UART */
+    initialize_uart();
+
+
     #if CY_CAPSENSE_BIST_EN
     measure_cp(); /* Measure the sensor capacitance using BIST */
     #endif
@@ -142,7 +152,8 @@ int main(void)
             Cy_CapSense_ProcessAllWidgets(&cy_capsense_context);
 
             /* Turns LED ON/OFF based on Slider status */
-            led_control();
+            // led_control();
+            process_slider_position();
 
             /* Establishes synchronized communication with the CapSense Tuner tool */
             Cy_CapSense_RunTuner(&cy_capsense_context);
@@ -264,15 +275,74 @@ static void initialize_capsense_tuner(void)
 * Turning LED ON/OFF based on touchpad status
 *
 *******************************************************************************/
-static void led_control(void)
+// static void led_control(void)
+// {
+//     if(MSC_CAPSENSE_WIDGET_INACTIVE != Cy_CapSense_IsWidgetActive(CY_CAPSENSE_LINEARSLIDER0_WDGT_ID, &cy_capsense_context))
+//     {
+//         Cy_GPIO_Write(CYBSP_USER_LED_PORT, CYBSP_USER_LED_NUM, CYBSP_LED_STATE_ON);
+//     }
+//     else
+//     {
+//         Cy_GPIO_Write(CYBSP_USER_LED_PORT, CYBSP_USER_LED_NUM, CYBSP_LED_STATE_OFF);
+//     }
+// }
+
+/*******************************************************************************
+* Function Name: process_slider_position
+********************************************************************************
+* Summary:
+* Process slider position - print position with uart / control led
+*
+*******************************************************************************/
+static void process_slider_position(void)
 {
-    if(MSC_CAPSENSE_WIDGET_INACTIVE != Cy_CapSense_IsWidgetActive(CY_CAPSENSE_LINEARSLIDER0_WDGT_ID, &cy_capsense_context))
+    uint16_t slider_position;
+    char print_uart[50]; // UART buffer
+
+    /*  */
+    if (CY_CAPSENSE_POSITION_NONE != Cy_CapSense_GetTouchInfo(
+                                         CY_CAPSENSE_LINEARSLIDER0_WDGT_ID,
+                                         &cy_capsense_context))
     {
-        Cy_GPIO_Write(CYBSP_USER_LED_PORT, CYBSP_USER_LED_NUM, CYBSP_LED_STATE_ON);
+        /* Get slider */
+        slider_position = Cy_CapSense_GetTouchInfo(CY_CAPSENSE_LINEARSLIDER0_WDGT_ID,
+                                                   &cy_capsense_context)->ptrPosition->x;
+
+        /* Control LED with slider position*/
+        if (slider_position < 25)
+        {
+            Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_OFF);
+            Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_OFF);
+            Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_OFF);
+        }        
+        else if (slider_position < 50)
+        {
+            Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_ON);
+            Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_OFF);
+            Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_OFF);
+        }
+        else if (slider_position < 75)
+        {
+            Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_ON);
+            Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_ON);
+            Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_OFF);
+        }
+        else
+        {
+            Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_ON);
+            Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_ON);
+            Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_ON);
+        }
+
+        /* Print Slider position with UART */
+        // printf("Slider Position: %u\n", slider_position);
+        sprintf(print_uart, "Slider Position: %u\n", slider_position);
+        Cy_SCB_UART_PutString(CYBSP_UART_HW, print_uart);
     }
     else
     {
-        Cy_GPIO_Write(CYBSP_USER_LED_PORT, CYBSP_USER_LED_NUM, CYBSP_LED_STATE_OFF);
+        Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_OFF);
+        Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_OFF);
     }
 }
 
@@ -317,5 +387,21 @@ static void measure_cp(void)
     shield_cap = cy_capsense_context.ptrBistContext->ptrChShieldCap[0];
 }
 #endif
+
+/*******************************************************************************
+* Function Name: initialize_uart
+********************************************************************************
+* Summary:
+* Initialize UART
+*
+*******************************************************************************/
+static void initialize_uart(void)
+{
+    Cy_SCB_UART_Init(CYBSP_UART_HW, &CYBSP_UART_config, NULL);
+    Cy_SCB_UART_Enable(CYBSP_UART_HW);
+
+    setvbuf(stdout, NULL, _IONBF, 0);
+    Cy_SCB_UART_PutString(CYBSP_UART_HW, "UART Initialized\n");
+}
 
 /* [] END OF FILE */
