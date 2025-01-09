@@ -5,6 +5,7 @@
 - https://github.com/Infineon/XMC-for-Arduino
 - https://github.com/Infineon/mtb-example-psoc4-hello-world
 - https://github.com/Infineon/mtb-example-psoc4-i2c-master-slave/tree/master
+- https://github.com/Infineon/mtb-example-psoc4-msc-capsense-csd-slider-tuning
 
 ## Codes
 1. XMC_1100_BK_6LED : Turning on the built-in 6 LED sequentially on XMC_1100_Bootkit (For arduino IDE)
@@ -19,3 +20,5 @@
 4. Hello_World_3LEDS : Turning on the built-in 3 LEDs sequentially on PSoC 4100S MAX (For ModusToolbox) - Based on Hello World example
 
 5. I2C_Master_EzI2C_Slave : Modified I2C example to print to the serial monitor via UART on every Send and Read operation (For ModusToolbox) - Based on I2C_Master_EzI2C_Slave example
+
+5. MSC_CAPSENSE_CSD_Slider_Tuning :
