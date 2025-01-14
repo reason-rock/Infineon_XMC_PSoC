@@ -324,64 +324,83 @@ static void initialize_capsense_tuner(void)
 *******************************************************************************/
 static void process_touchpad_position(void)
 {
-    uint16_t slider_position_x;
-    uint16_t slider_position_y;
-    char print_uart[50]; // UART buffer
+    uint16_t x;
+    uint16_t y;
+    static uint16_t last_x = 0;
+    static uint16_t last_y = 0;
+    static bool single_click = true;
+    char print_uart[100]; // UART buffer
 
-    /*  */
-    if (CY_CAPSENSE_POSITION_NONE != Cy_CapSense_GetTouchInfo(
-                                         CY_CAPSENSE_TOUCHPAD0_WDGT_ID,
-                                         &cy_capsense_context))
+    if (MSC_CAPSENSE_WIDGET_INACTIVE == Cy_CapSense_IsWidgetActive(CY_CAPSENSE_TOUCHPAD0_WDGT_ID, &cy_capsense_context))
     {
-        /* Get slider */
-        slider_position_x = Cy_CapSense_GetTouchInfo(CY_CAPSENSE_TOUCHPAD0_WDGT_ID,
-                                                   &cy_capsense_context)->ptrPosition->x;
+        // x = -1;
+        // y = -1;
 
-        slider_position_y = Cy_CapSense_GetTouchInfo(CY_CAPSENSE_TOUCHPAD0_WDGT_ID,
-                                            &cy_capsense_context)->ptrPosition->y;
+        single_click = true;
 
-        /* Control LED with slider position*/
-        if (slider_position_x < 25)
-        {
-            Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_OFF);
-            Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_OFF);
-            Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_OFF);
-        }        
-        else if (slider_position_x < 50)
-        {
-            Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_ON);
-            Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_OFF);
-            Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_OFF);
-        }
-        else if (slider_position_x < 75)
-        {
-            Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_ON);
-            Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_ON);
-            Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_OFF);
-        }
-        else
-        {
-            Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_ON);
-            Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_ON);
-            Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_ON);
-            // sprintf(print_uart, "%u,%u\n", untouche);
-        Cy_SCB_UART_PutString(CYBSP_UART_HW, print_uart);
-        }
-
-        /* Print Slider position with UART */
-        // printf("Slider Position: %u\n", slider_position_x);
-        // sprintf(print_uart, "Slider Position_x: %u\n", slider_position_x);
-        // // Cy_SCB_UART_PutString(CYBSP_UART_HW, print_uart);
-        // sprintf(print_uart, "Slider Position_y: %u\n", slider_position_y);
-        sprintf(print_uart, "%u,%u\n", slider_position_x, slider_position_y);
-        Cy_SCB_UART_PutString(CYBSP_UART_HW, print_uart);
+        Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_OFF);
+        Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_OFF);
+        Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_OFF);
     }
     else
     {
-        Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_OFF);
-        Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_OFF);
+        /* Get touchpad */
+        x = Cy_CapSense_GetTouchInfo(CY_CAPSENSE_TOUCHPAD0_WDGT_ID,
+                                                     &cy_capsense_context)->ptrPosition->x;
+        y = Cy_CapSense_GetTouchInfo(CY_CAPSENSE_TOUCHPAD0_WDGT_ID,
+                                                     &cy_capsense_context)->ptrPosition->y;
+
+        if (single_click)
+        {
+            last_x = x;
+            last_y = y;
+            single_click = false;
+        }
+        else
+        {
+            int32_t dx = x - last_x;
+            int32_t dy = y - last_y;
+
+            last_x = x;
+            last_y = y;
+
+            /* Control LED with slider position*/
+            if (x < 25)
+            {
+                Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_OFF);
+                Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_OFF);
+                Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_OFF);
+            }
+            else if (x < 50)
+            {
+                Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_ON);
+                Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_OFF);
+                Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_OFF);
+            }
+            else if (x < 75)
+            {
+                Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_ON);
+                Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_ON);
+                Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_OFF);
+            }
+            else
+            {
+                Cy_GPIO_Write(CYBSP_LED1_PORT, CYBSP_LED1_PIN, LED_ON);
+                Cy_GPIO_Write(CYBSP_LED2_PORT, CYBSP_LED2_PIN, LED_ON);
+                Cy_GPIO_Write(CYBSP_LED3_PORT, CYBSP_LED3_PIN, LED_ON);
+            }
+
+            /* Print Slider position with UART */
+            // printf("Slider Position: %u\n", slider_position);
+            sprintf(print_uart, "X: %d, Y: %d, X Distance: %ld, Y Distance: %ld\n",
+                    x, y, dx, dy);
+            Cy_SCB_UART_PutString(CYBSP_UART_HW, print_uart);
+        }
     }
 }
+
+
+
 
 /*******************************************************************************
 * Function Name: ezi2c_isr
